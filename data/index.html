@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-S3 Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #007acc;
+            --accent-hover: #005a9e;
+            --success: #00c853;
+            --warning: #ff9800;
+            --error: #f44336;
+        }
+        
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f0f0f0;
+            --bg-tertiary: #e0e0e0;
+            --text-primary: #000000;
+            --text-secondary: #333333;
+            --accent: #2196f3;
+            --accent-hover: #1976d2;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+        
+        .header-left h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, var(--accent), #00bcd4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-left p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .card {
+            background: var(--bg-secondary);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border: 1px solid var(--bg-tertiary);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+        }
+        
+        .card h2 {
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .status-item {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .status-item:hover {
+            background: var(--bg-secondary);
+            transform: scale(1.02);
+        }
+        
+        .status-item h3 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-item .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-item .unit {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.danger {
+            background: var(--error);
+        }
+        
+        button.danger:hover {
+            background: #d32f2f;
+        }
+        
+        button.warning {
+            background: var(--warning);
+            color: #000;
+        }
+        
+        button.warning:hover {
+            background: #f57c00;
+        }
+        
+        button.success {
+            background: var(--success);
+        }
+        
+        button.success:hover {
+            background: #00b248;
+        }
+        
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .sensor-card {
+            background: var(--bg-tertiary);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        
+        .sensor-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .led-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .led-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #666;
+            transition: background 0.3s ease;
+        }
+        
+        .led-indicator.on {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+        
+        .log-container {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+            background: var(--bg-secondary);
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-connected {
+            background: rgba(0, 200, 83, 0.2);
+            color: var(--success);
+        }
+        
+        .status-disconnected {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--error);
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .connected .status-indicator {
+            background: var(--success);
+        }
+        
+        .disconnected .status-indicator {
+            background: var(--error);
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .header-right {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>ESP32-S3 Dashboard</h1>
+                <p>Real-time monitoring and control</p>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-indicator"></div>
+                    <span>Connecting...</span>
+                </div>
+                <button onclick="toggleTheme()">🎨 Toggle Theme</button>
+            </div>
+        </header>
+        
+        <div class="card">
+            <h2>📊 Device Status</h2>
+            <div class="status-grid" id="statusGrid">
+                <!-- Dynamic content will be inserted here -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🌡️ Sensor Readings</h2>
+            <div class="sensor-grid" id="sensorGrid">
+                <!-- Sensor data will be inserted here -->
+            </div>
+            <div class="controls">
+                <button onclick="getSensorData()" class="success">🔄 Refresh Sensors</button>
+                <button onclick="toggleLED()" class="warning" id="ledButton">💡 Turn LED ON</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>⚙️ System Controls</h2>
+            <div class="controls">
+                <button onclick="restartDevice()" class="warning">🔄 Restart Device</button>
+                <button onclick="scanNetworks()" class="success">📡 Scan Networks</button>
+                <button onclick="factoryReset()" class="danger">🗑️ Factory Reset</button>
+            </div>
+            
+            <h3 style="margin-top: 25px;">🔧 Custom Controls</h3>
+            <div class="controls">
+                <input type="number" id="tempInput" placeholder="Set Temperature" step="0.1" style="padding: 10px; border-radius: 6px; border: 1px solid var(--bg-tertiary); background: var(--bg-primary); color: var(--text-primary);">
+                <button onclick="setTemperature()">🌡️ Set Temp</button>
+                
+                <input type="number" id="humInput" placeholder="Set Humidity" step="0.1" style="padding: 10px; border-radius: 6px; border: 1px solid var(--bg-tertiary); background: var(--bg-primary); color: var(--text-primary);">
+                <button onclick="setHumidity()">💧 Set Humidity</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📝 System Log</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">System initialized. Waiting for data...</div>
+            </div>
+            <div class="controls" style="margin-top: 15px;">
+                <button onclick="clearLog()">🗑️ Clear Log</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = new WebSocket(`ws://${window.location.hostname}:81/`);
+        let isConnected = false;
+        let ledState = false;
+        
+        // WebSocket event handlers
+        ws.onopen = function(event) {
+            addLog("🔗 WebSocket connected");
+            updateConnectionStatus(true);
+            ws.send('getStatus');
+            ws.send('getSensors');
+        };
+        
+        ws.onclose = function(event) {
+            addLog("❌ WebSocket disconnected");
+            updateConnectionStatus(false);
+        };
+        
+        ws.onerror = function(error) {
+            addLog("❌ WebSocket error: " + error);
+            updateConnectionStatus(false);
+        };
+        
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (e) {
+                addLog("❌ Error parsing WebSocket message: " + e);
+            }
+        };
+        
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'status':
+                    updateDashboard(data);
+                    break;
+                case 'sensorData':
+                case 'sensorUpdate':
+                    updateSensors(data);
+                    break;
+                case 'ledState':
+                    updateLEDState(data.state);
+                    break;
+                case 'temperatureSet':
+                    addLog("🌡️ Temperature set to: " + data.value + "°C");
+                    break;
+                default:
+                    addLog("📨 Received: " + JSON.stringify(data));
+            }
+        }
+        
+        function updateDashboard(data) {
+            document.getElementById('statusGrid').innerHTML = `
+                <div class="status-item">
+                    <h3>WiFi Status</h3>
+                    <div class="value">${data.wifi.connected ? 'Connected' : 'Disconnected'}</div>
+                    <div class="unit">${data.wifi.ssid}</div>
+                </div>
+                <div class="status-item">
+                    <h3>IP Address</h3>
+                    <div class="value">${data.wifi.ip}</div>
+                    <div class="unit">Signal: ${data.wifi.rssi} dBm</div>
+                </div>
+                <div class="status-item">
+                    <h3>Memory</h3>
+                    <div class="value">${Math.round(data.system.freeHeap / 1024)}</div>
+                    <div class="unit">KB free</div>
+                </div>
+                <div class="status-item">
+                    <h3>Uptime</h3>
+                    <div class="value">${Math.round(data.system.uptime / 1000)}</div>
+                    <div class="unit">seconds</div>
+                </div>
+                <div class="status-item">
+                    <h3>Telnet</h3>
+                    <div class="value">${data.telnet.enabled ? 'Enabled' : 'Disabled'}</div>
+                    <div class="unit">${data.telnet.clients} clients</div>
+                </div>
+                <div class="status-item">
+                    <h3>Theme</h3>
+                    <div class="value">${data.config.theme}</div>
+                    <div class="unit">${data.config.deviceName}</div>
+                </div>
+            `;
+            
+            // Update theme
+            document.documentElement.setAttribute('data-theme', data.config.theme);
+        }
+        
+        function updateSensors(data) {
+            document.getElementById('sensorGrid').innerHTML = `
+                <div class="sensor-card">
+                    <h3>Temperature</h3>
+                    <div class="sensor-value">${data.temperature.toFixed(1)}</div>
+                    <div class="sensor-unit">°C</div>
+                </div>
+                <div class="sensor-card">
+                    <h3>Humidity</h3>
+                    <div class="sensor-value">${data.humidity.toFixed(1)}</div>
+                    <div class="sensor-unit">%</div>
+                </div>
+                <div class="sensor-card">
+                    <h3>Pressure</h3>
+                    <div class="sensor-value">${data.pressure.toFixed(1)}</div>
+                    <div class="sensor-unit">hPa</div>
+                </div>
+                <div class="sensor-card">
+                    <h3>LED Status</h3>
+                    <div class="sensor-value">${data.ledState ? 'ON' : 'OFF'}</div>
+                    <div class="sensor-unit">
+                        <div class="led-control">
+                            <div class="led-indicator ${data.ledState ? 'on' : ''}"></div>
+                            <span>${data.ledState ? 'Active' : 'Inactive'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            ledState = data.ledState;
+            updateLEDButton();
+        }
+        
+        function updateLEDState(state) {
+            ledState = state;
+            updateLEDButton();
+            addLog("💡 LED " + (state ? "turned ON" : "turned OFF"));
+        }
+        
+        function updateLEDButton() {
+            const button = document.getElementById('ledButton');
+            button.textContent = ledState ? '💡 Turn LED OFF' : '💡 Turn LED ON';
+            button.className = ledState ? 'warning' : 'success';
+        }
+        
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            const status = document.getElementById('connectionStatus');
+            status.className = `connection-status ${connected ? 'status-connected connected' : 'status-disconnected disconnected'}`;
+            status.innerHTML = `
+                <div class="status-indicator"></div>
+                <span>${connected ? 'Connected' : 'Disconnected'}</span>
+            `;
+        }
+        
+        function addLog(message) {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        // Control functions
+        function toggleTheme() {
+            ws.send('toggleTheme');
+            addLog("🎨 Theme toggle requested");
+        }
+        
+        function getSensorData() {
+            if (isConnected) {
+                ws.send('getSensors');
+                addLog("🔄 Sensor data refresh requested");
+            }
+        }
+        
+        function toggleLED() {
+            if (isConnected) {
+                ws.send('toggleLED');
+                addLog("💡 LED toggle requested");
+            }
+        }
+        
+        function restartDevice() {
+            if (confirm('Are you sure you want to restart the device?')) {
+                fetch('/api/system?action=restart', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        addLog("🔄 Restart command sent: " + JSON.stringify(data));
+                    })
+                    .catch(error => {
+                        addLog("❌ Error sending restart command: " + error);
+                    });
+            }
+        }
+        
+        function factoryReset() {
+            if (confirm('This will erase all settings and restart the device! Are you sure?')) {
+                fetch('/api/system?action=factoryReset', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        addLog("🗑️ Factory reset command sent: " + JSON.stringify(data));
+                    })
+                    .catch(error => {
+                        addLog("❌ Error sending factory reset command: " + error);
+                    });
+            }
+        }
+        
+        function scanNetworks() {
+            fetch('/api/scan')
+                .then(response => response.json())
+                .then(data => {
+                    addLog("📡 Network scan completed. Found " + data.networks.length + " networks");
+                    console.log("Available networks:", data.networks);
+                })
+                .catch(error => {
+                    addLog("❌ Error scanning networks: " + error);
+                });
+        }
+        
+        function setTemperature() {
+            const temp = document.getElementById('tempInput').value;
+            if (temp && isConnected) {
+                ws.send('setTemperature:' + temp);
+                addLog("🌡️ Temperature set request: " + temp + "°C");
+                document.getElementById('tempInput').value = '';
+            }
+        }
+        
+        function setHumidity() {
+            const hum = document.getElementById('humInput').value;
+            if (hum && isConnected) {
+                // This would need to be implemented on the device side
+                addLog("💧 Humidity set request: " + hum + "% (Not implemented)");
+                document.getElementById('humInput').value = '';
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog("🗑️ Log cleared");
+        }
+        
+        // Request status every 10 seconds
+        setInterval(() => {
+            if (isConnected) {
+                ws.send('getStatus');
+            }
+        }, 10000);
+        
+        // Initial setup
+        addLog("🚀 Dashboard initialized");
+        addLog("📡 Connecting to WebSocket...");
+    </script>
+</body>
+</html>
